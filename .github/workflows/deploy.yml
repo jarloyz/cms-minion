@@ -36,21 +36,15 @@ jobs:
           npm install
           npm run build
 
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./
-          server-dir: ${{ secrets.FTP_TARGET_DIR }}
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/.env*
-            storage/logs/**
-            storage/framework/cache/**
-            storage/framework/sessions/**
-            storage/framework/views/**
-            tests/**
+      - name: Setup SSH Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.FTP_SERVER }} >> ~/.ssh/known_hosts
+
+      - name: Deploy via rsync over SSH/SFTP
+        run: |
+          # Use sshpass to provide password securely (for shared hostings without SSH keys)
+          sudo apt-get install -y sshpass
+          export SSHPASS="${{ secrets.FTP_PASSWORD }}"
+
+          sshpass -e rsync -avz --no-perms --no-owner --no-group --ignore-existing --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='.env' --exclude='storage/logs/*' --exclude='storage/framework/cache/*' --exclude='storage/framework/sessions/*' --exclude='storage/framework/views/*' --exclude='tests' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_SERVER }}:${{ secrets.FTP_TARGET_DIR }}
