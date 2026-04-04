@@ -36,15 +36,24 @@ jobs:
           npm install
           npm run build
 
-      - name: Setup SSH Known Hosts
+      - name: Deploy via lftp (SFTP)
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.FTP_SERVER }} >> ~/.ssh/known_hosts
+          sudo apt-get update
+          sudo apt-get install -y lftp
 
-      - name: Deploy via rsync over SSH/SFTP
-        run: |
-          # Use sshpass to provide password securely (for shared hostings without SSH keys)
-          sudo apt-get install -y sshpass
-          export SSHPASS="${{ secrets.FTP_PASSWORD }}"
-
-          sshpass -e rsync -avz --no-perms --no-owner --no-group --ignore-existing --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='.env' --exclude='storage/logs/*' --exclude='storage/framework/cache/*' --exclude='storage/framework/sessions/*' --exclude='storage/framework/views/*' --exclude='tests' ./ ${{ secrets.FTP_USERNAME }}@${{ secrets.FTP_SERVER }}:${{ secrets.FTP_TARGET_DIR }}
+          # Utilizamos lftp con el comando mirror (modo reverso para subir) a través del protocolo sftp://
+          lftp -c "
+          set sftp:auto-confirm yes;
+          open -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} sftp://${{ secrets.FTP_SERVER }};
+          mirror -R --verbose \
+            --exclude-glob=.git/ \
+            --exclude-glob=.github/ \
+            --exclude-glob=node_modules/ \
+            --exclude-glob=.env \
+            --exclude-glob=storage/logs/ \
+            --exclude-glob=storage/framework/cache/ \
+            --exclude-glob=storage/framework/sessions/ \
+            --exclude-glob=storage/framework/views/ \
+            --exclude-glob=tests/ \
+            ./ ${{ secrets.FTP_TARGET_DIR }}
+          "
