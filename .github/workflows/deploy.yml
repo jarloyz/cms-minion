@@ -59,6 +59,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install NPM dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Build frontend assets
+        run: npm run build
+
       - name: Validate deploy credentials
         run: |
           if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USERNAME}" ] || [ -z "${SSH_PRIVATE_KEY}" ] || [ -z "${DEPLOY_PATH}" ]; then
@@ -110,7 +122,6 @@ jobs:
             --exclude='.github/' \
             --exclude='vendor/' \
             --exclude='node_modules/' \
-            --exclude='public/build/' \
             --exclude='.env' \
             --exclude='tests/' \
             --exclude='storage/logs/' \
@@ -127,7 +138,5 @@ jobs:
             mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache &&
             chmod -R 775 storage bootstrap/cache &&
             /usr/bin/php8.4-cli ~/composer.phar install --no-interaction --prefer-dist --optimize-autoloader --no-dev &&
-            if [ -f package-lock.json ]; then npm ci; else npm install; fi &&
-            npm run build &&
             /usr/bin/php8.4-cli artisan optimize:clear
           "
