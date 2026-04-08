@@ -5,6 +5,10 @@
     $seo = $site->seo;
     $tracking = $site->tracking;
     $cta = $site->cta;
+    $hero = $site->hero;
+    $contacto = $site->contacto;
+    $companyProfile = $site->company_profile;
+    $contactForm = $site->contact_form;
     $socialLinks = $site->resolved_social_links;
     $currentUrl = $site->resolved_canonical_url ?: url()->current();
     $metaTitle = $site->resolved_meta_title;
@@ -14,6 +18,22 @@
     $ogImage = $site->resolved_og_image;
     $robotsContent = $seo['indexable'] ? 'index,follow,max-image-preview:large' : 'noindex,nofollow';
     $ctaTarget = $cta['open_in_new_tab'] ? '_blank' : '_self';
+    $heroSlides = collect($hero['slides'] ?? [])
+        ->filter(fn ($slide) => is_array($slide) && filled($slide['image'] ?? null))
+        ->values();
+    $facebookEmbedUrl = $contacto['facebook_embed_url']
+        ? preg_replace('/([?&])width=\d+/', '$1width=500', $contacto['facebook_embed_url'])
+        : null;
+    $facebookEmbedUrl = $facebookEmbedUrl
+        ? preg_replace('/([?&])height=\d+/', '$1height=620', $facebookEmbedUrl)
+        : null;
+    $requestHost = request()->getHost();
+    $cleanRequestHost = str_replace('www.', '', $requestHost);
+    $cleanSiteDomain = str_replace('www.', '', (string) $site->dominio);
+    $usesCustomDomain = filled($site->dominio) && $cleanRequestHost === $cleanSiteDomain;
+    $contactAction = $usesCustomDomain
+        ? route('sites.contact.domain', ['domain' => $requestHost])
+        : route('sites.contact.slug', ['slug' => $site->slug]);
 @endphp
 <head>
     <meta charset="utf-8">
@@ -151,9 +171,23 @@
         .secondary-copy-muted {
             color: color-mix(in srgb, var(--color-secundario-foreground) 72%, transparent);
         }
+
+        .hero-slide {
+            display: none;
+        }
+
+        .hero-slide.is-active {
+            display: block;
+        }
     </style>
 </head>
-<body class="text-slate-800 antialiased selection:bg-brand selection:text-white flex flex-col min-h-screen">
+<body
+    class="text-slate-800 antialiased selection:bg-brand selection:text-white flex flex-col min-h-screen"
+    @if ($heroSlides->count() > 1)
+        data-hero-slider
+        data-hero-interval="{{ max((int) ($hero['autoplay_ms'] ?? 5000), 1500) }}"
+    @endif
+>
     @if ($tracking['google_tag_manager_id'])
         <noscript>
             <iframe src="https://www.googletagmanager.com/ns.html?id={{ $tracking['google_tag_manager_id'] }}" height="0" width="0" style="display:none;visibility:hidden"></iframe>
@@ -198,6 +232,14 @@
             </nav>
 
             <div class="flex items-center gap-4">
+                @if ($companyProfile['repse_enabled'] && $companyProfile['repse_url'])
+                    <a href="{{ $companyProfile['repse_url'] }}" target="_blank" rel="noreferrer noopener" class="hidden lg:inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900">
+                        @if ($companyProfile['repse_logo'])
+                            <img src="{{ $companyProfile['repse_logo'] }}" alt="{{ $companyProfile['repse_label'] }}" class="h-5 w-auto">
+                        @endif
+                        <span>{{ $companyProfile['repse_label'] }}</span>
+                    </a>
+                @endif
                 @if ($cta['enabled'] && $cta['placement'] === 'navbar' && $cta['label'] && $cta['url'])
                     <a href="{{ $cta['url'] }}" target="{{ $ctaTarget }}" @if($cta['open_in_new_tab']) rel="noreferrer noopener" @endif class="hidden md:inline-flex items-center justify-center rounded-full {{ $cta['style'] === 'secondary' ? 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300' : 'bg-brand text-white hover:bg-brand-dark' }} px-5 py-2.5 text-sm font-semibold shadow-sm transition-all">
                         {{ $cta['label'] }}
@@ -247,11 +289,47 @@
                                     {{ $cta['label'] }}
                                 </a>
                             @endif
+                            @if ($companyProfile['repse_enabled'] && $companyProfile['repse_url'])
+                                <a href="{{ $companyProfile['repse_url'] }}" target="_blank" rel="noreferrer noopener" class="inline-flex items-center gap-3 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900">
+                                    @if ($companyProfile['repse_logo'])
+                                        <img src="{{ $companyProfile['repse_logo'] }}" alt="{{ $companyProfile['repse_label'] }}" class="h-6 w-auto">
+                                    @endif
+                                    <span>{{ $companyProfile['repse_label'] }}</span>
+                                </a>
+                            @endif
                         </div>
                     </div>
                     <div class="relative lg:ml-auto w-full max-w-xl xl:max-w-none">
                         <div class="relative rounded-2xl bg-white p-2 shadow-2xl ring-1 ring-slate-900/10">
-                            <img src="{{ $site->imagen_principal }}" alt="Imagen principal" class="w-full rounded-xl bg-slate-100 object-cover aspect-[4/3] shadow-inner">
+                            @if ($heroSlides->isNotEmpty())
+                                <div class="relative overflow-hidden rounded-xl bg-slate-100 shadow-inner aspect-[4/3]">
+                                    @foreach ($heroSlides as $index => $slide)
+                                        <img
+                                            src="{{ $slide['image'] }}"
+                                            alt="{{ $slide['alt'] ?? ('Slide ' . ($index + 1)) }}"
+                                            class="hero-slide {{ $index === 0 ? 'is-active' : '' }} w-full h-full object-cover"
+                                            data-hero-slide
+                                        >
+                                    @endforeach
+
+                                    @if ($heroSlides->count() > 1)
+                                        <div class="absolute inset-x-0 bottom-4 flex justify-center gap-2">
+                                            @foreach ($heroSlides as $index => $slide)
+                                                <button
+                                                    type="button"
+                                                    class="h-2.5 w-2.5 rounded-full bg-white/70 transition data-[active=true]:w-8 data-[active=true]:bg-white"
+                                                    data-hero-dot
+                                                    data-slide-index="{{ $index }}"
+                                                    data-active="{{ $index === 0 ? 'true' : 'false' }}"
+                                                    aria-label="Ir al slide {{ $index + 1 }}"
+                                                ></button>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @else
+                                <img src="{{ $site->imagen_principal }}" alt="Imagen principal" class="w-full rounded-xl bg-slate-100 object-cover aspect-[4/3] shadow-inner">
+                            @endif
 
                             <div class="absolute -bottom-6 -left-6 rounded-2xl bg-white p-4 shadow-xl ring-1 ring-slate-900/10 flex items-center gap-4 animate-bounce" style="animation-duration: 3s;">
                                 <div class="rounded-full bg-brand-light p-3">
@@ -300,6 +378,35 @@
                                 @endif
                             </dl>
                         </div>
+                        @if ($companyProfile['mission'] || $companyProfile['vision'] || !empty($companyProfile['values']))
+                            <div class="mt-16 grid grid-cols-1 gap-6 lg:grid-cols-3">
+                                @if ($companyProfile['mission'])
+                                    <article class="rounded-3xl border border-amber-200 bg-white p-8 shadow-sm">
+                                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">Mision</p>
+                                        <p class="mt-4 text-base leading-7 text-slate-700">{{ $companyProfile['mission'] }}</p>
+                                    </article>
+                                @endif
+                                @if ($companyProfile['vision'])
+                                    <article class="rounded-3xl border border-emerald-200 bg-white p-8 shadow-sm">
+                                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-700">Vision</p>
+                                        <p class="mt-4 text-base leading-7 text-slate-700">{{ $companyProfile['vision'] }}</p>
+                                    </article>
+                                @endif
+                                @if (!empty($companyProfile['values']))
+                                    <article class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+                                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-slate-700">Valores</p>
+                                        <ul class="mt-4 space-y-3 text-base leading-7 text-slate-700">
+                                            @foreach ($companyProfile['values'] as $value)
+                                                <li class="flex items-center gap-3">
+                                                    <span class="inline-flex h-2.5 w-2.5 rounded-full bg-brand"></span>
+                                                    <span>{{ $value }}</span>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </article>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </section>
             @elseif ($section === 'servicios')
@@ -380,6 +487,61 @@
                             @endif
                         </div>
 
+                        @if (session('contact_success'))
+                            <div class="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-900">
+                                {{ session('contact_success') }}
+                            </div>
+                        @endif
+
+                        @if ($errors->any())
+                            <div class="mt-8 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-900">
+                                <p class="font-semibold">No pudimos enviar tu mensaje.</p>
+                                <ul class="mt-2 space-y-1">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                        @if ($contactForm['enabled'])
+                            <div class="mt-12 rounded-[2rem] bg-white p-8 text-slate-900 shadow-2xl ring-1 ring-slate-900/5">
+                                <div class="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                                    <div>
+                                        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-brand">Formulario</p>
+                                        <h3 class="mt-3 text-2xl font-bold tracking-tight">Cuentanos lo que necesitas</h3>
+                                        <p class="mt-4 text-base leading-7 text-slate-600">
+                                            {{ $contactForm['intro'] }}
+                                        </p>
+                                    </div>
+
+                                    <form method="POST" action="{{ $contactAction }}" class="grid gap-4">
+                                        @csrf
+                                        <input type="text" name="company" value="" class="hidden" tabindex="-1" autocomplete="off">
+                                        <div>
+                                            <label for="contact-name" class="mb-2 block text-sm font-medium text-slate-700">Nombre</label>
+                                            <input id="contact-name" name="name" type="text" value="{{ old('name') }}" required class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">
+                                        </div>
+                                        <div>
+                                            <label for="contact-phone" class="mb-2 block text-sm font-medium text-slate-700">Telefono</label>
+                                            <input id="contact-phone" name="phone" type="text" value="{{ old('phone') }}" required class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">
+                                        </div>
+                                        <div>
+                                            <label for="contact-email" class="mb-2 block text-sm font-medium text-slate-700">Correo</label>
+                                            <input id="contact-email" name="email" type="email" value="{{ old('email') }}" required class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">
+                                        </div>
+                                        <div>
+                                            <label for="contact-message" class="mb-2 block text-sm font-medium text-slate-700">Mensaje</label>
+                                            <textarea id="contact-message" name="message" rows="5" required class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">{{ old('message') }}</textarea>
+                                        </div>
+                                        <button type="submit" class="inline-flex items-center justify-center rounded-full bg-brand px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-brand-dark">
+                                            {{ $contactForm['submit_label'] }}
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
+
                         @if (! empty($socialLinks) || ($cta['enabled'] && $cta['placement'] === 'contacto' && $cta['label'] && $cta['url']))
                             <div class="mt-10 flex flex-wrap items-center gap-3">
                                 @if ($cta['enabled'] && $cta['placement'] === 'contacto' && $cta['label'] && $cta['url'])
@@ -398,6 +560,37 @@
                                 @endforeach
                             </div>
                         @endif
+
+                        @if ($contacto['map_embed_url'] || $facebookEmbedUrl)
+                            <div class="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-{{ $contacto['map_embed_url'] && $facebookEmbedUrl ? '2' : '1' }}">
+                                @if ($contacto['map_embed_url'])
+                                    <div class="overflow-hidden rounded-3xl bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
+                                        <iframe
+                                            src="{{ $contacto['map_embed_url'] }}"
+                                            class="h-[420px] w-full"
+                                            style="border:0;"
+                                            allowfullscreen=""
+                                            loading="lazy"
+                                            referrerpolicy="no-referrer-when-downgrade"
+                                        ></iframe>
+                                    </div>
+                                @endif
+
+                                @if ($facebookEmbedUrl)
+                                    <div class="overflow-hidden rounded-3xl bg-white/5 ring-1 ring-white/10 backdrop-blur-sm">
+                                        <iframe
+                                            src="{{ $facebookEmbedUrl }}"
+                                            class="h-[620px] w-full"
+                                            style="border:none;overflow:hidden"
+                                            scrolling="no"
+                                            frameborder="0"
+                                            allowfullscreen="true"
+                                            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                                        ></iframe>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 </section>
             @endif
@@ -408,6 +601,12 @@
     <footer class="bg-white border-t border-slate-200 mt-auto">
         <div class="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
             <div class="flex justify-center space-x-6 md:order-2">
+                @if ($companyProfile['repse_enabled'] && $companyProfile['repse_url'])
+                    <a href="{{ $companyProfile['repse_url'] }}" target="_blank" rel="noreferrer noopener" class="text-slate-400 hover:text-brand">
+                        <span class="sr-only">{{ $companyProfile['repse_label'] }}</span>
+                        <span class="text-sm font-medium">{{ $companyProfile['repse_label'] }}</span>
+                    </a>
+                @endif
                 @foreach ($socialLinks as $network => $url)
                     <a href="{{ $url }}" target="_blank" rel="noreferrer noopener" class="text-slate-400 hover:text-brand">
                         <span class="sr-only">{{ $network }}</span>
@@ -424,5 +623,42 @@
             </div>
         </div>
     </footer>
+
+    @if ($heroSlides->count() > 1)
+        <script>
+            (() => {
+                const root = document.querySelector('[data-hero-slider]');
+
+                if (!root) {
+                    return;
+                }
+
+                const slides = Array.from(document.querySelectorAll('[data-hero-slide]'));
+                const dots = Array.from(document.querySelectorAll('[data-hero-dot]'));
+                const intervalMs = Number(root.dataset.heroInterval || 5000);
+                let current = 0;
+
+                const activate = (index) => {
+                    current = index;
+
+                    slides.forEach((slide, slideIndex) => {
+                        slide.classList.toggle('is-active', slideIndex === index);
+                    });
+
+                    dots.forEach((dot, dotIndex) => {
+                        dot.dataset.active = dotIndex === index ? 'true' : 'false';
+                    });
+                };
+
+                dots.forEach((dot, index) => {
+                    dot.addEventListener('click', () => activate(index));
+                });
+
+                window.setInterval(() => {
+                    activate((current + 1) % slides.length);
+                }, intervalMs);
+            })();
+        </script>
+    @endif
 </body>
 </html>

@@ -29,6 +29,10 @@ class Site extends Model
         'seo_config',
         'tracking_config',
         'textos_ui',
+        'hero_config',
+        'contacto_config',
+        'company_profile',
+        'contact_form_config',
     ];
 
     public const DEFAULT_SECTION_ORDER = [
@@ -195,6 +199,46 @@ class Site extends Model
         ];
     }
 
+    public static function getDefaultHeroConfig(): array
+    {
+        return [
+            'slides' => [],
+            'autoplay_ms' => 5000,
+        ];
+    }
+
+    public static function getDefaultContactoConfig(): array
+    {
+        return [
+            'map_embed_url' => null,
+            'facebook_embed_url' => null,
+        ];
+    }
+
+    public static function getDefaultCompanyProfile(): array
+    {
+        return [
+            'mission' => null,
+            'vision' => null,
+            'values' => [],
+            'repse_enabled' => false,
+            'repse_label' => 'REPSE',
+            'repse_url' => null,
+            'repse_logo' => null,
+        ];
+    }
+
+    public static function getDefaultContactFormConfig(): array
+    {
+        return [
+            'enabled' => true,
+            'recipient_email' => null,
+            'submit_label' => 'Enviar',
+            'success_message' => 'Gracias, recibimos tu mensaje y te contactaremos pronto.',
+            'intro' => 'Completa el formulario para una mejor experiencia.',
+        ];
+    }
+
     public function getSeoAttribute(): array
     {
         return array_merge(self::getDefaultSeoConfig(), $this->seo_config ?? []);
@@ -208,6 +252,40 @@ class Site extends Model
     public function getCtaAttribute(): array
     {
         return array_merge(self::getDefaultCtaConfig(), $this->cta_config ?? []);
+    }
+
+    public function getHeroAttribute(): array
+    {
+        return array_merge(self::getDefaultHeroConfig(), $this->hero_config ?? []);
+    }
+
+    public function getContactoAttribute(): array
+    {
+        return array_merge(self::getDefaultContactoConfig(), $this->contacto_config ?? []);
+    }
+
+    public function getCompanyProfileAttribute(): array
+    {
+        $profile = array_merge(self::getDefaultCompanyProfile(), $this->company_profile ?? []);
+
+        $profile['values'] = collect($profile['values'] ?? [])
+            ->map(function ($value) {
+                if (is_array($value)) {
+                    return $value['label'] ?? null;
+                }
+
+                return is_string($value) ? $value : null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return $profile;
+    }
+
+    public function getContactFormAttribute(): array
+    {
+        return array_merge(self::getDefaultContactFormConfig(), $this->contact_form_config ?? []);
     }
 
     public function getResolvedSocialLinksAttribute(): array
@@ -300,6 +378,10 @@ class Site extends Model
             'seo_config' => 'array',
             'tracking_config' => 'array',
             'textos_ui' => 'array',
+            'hero_config' => 'array',
+            'contacto_config' => 'array',
+            'company_profile' => 'array',
+            'contact_form_config' => 'array',
         ];
     }
 }

@@ -68,6 +68,27 @@ class SiteForm
                                             ->maxLength(255)
                                             ->columnSpanFull(),
                                     ]),
+                                Section::make('Hero visual')
+                                    ->schema([
+                                        Repeater::make('hero_config.slides')
+                                            ->label('Slides del hero')
+                                            ->helperText('Si agregas slides, reemplazan la imagen principal por un slider simple.')
+                                            ->schema([
+                                                TextInput::make('image')
+                                                    ->label('URL de imagen')
+                                                    ->url()
+                                                    ->required(),
+                                                TextInput::make('alt')
+                                                    ->label('Texto alternativo')
+                                                    ->maxLength(255),
+                                            ])
+                                            ->columnSpanFull()
+                                            ->itemLabel(fn (array $state): ?string => $state['alt'] ?? $state['image'] ?? null),
+                                        TextInput::make('hero_config.autoplay_ms')
+                                            ->label('Autoplay del slider (ms)')
+                                            ->numeric()
+                                            ->default(5000),
+                                    ]),
                                 Section::make('Contacto')
                                     ->columns(2)
                                     ->schema([
@@ -88,6 +109,33 @@ class SiteForm
                                             ->label('URL de contacto general')
                                             ->helperText('Puede ser un formulario, Calendly, WhatsApp o pagina de contacto.')
                                             ->url()
+                                            ->columnSpanFull(),
+                                        TextInput::make('contacto_config.map_embed_url')
+                                            ->label('Google Maps embed URL')
+                                            ->url()
+                                            ->columnSpanFull(),
+                                        TextInput::make('contacto_config.facebook_embed_url')
+                                            ->label('Facebook embed URL')
+                                            ->helperText('Opcional. Solo si quieres mostrar el frame de Facebook en contacto.')
+                                            ->url()
+                                            ->columnSpanFull(),
+                                        Toggle::make('contact_form_config.enabled')
+                                            ->label('Activar formulario de contacto')
+                                            ->default(true),
+                                        TextInput::make('contact_form_config.submit_label')
+                                            ->label('Texto del boton')
+                                            ->maxLength(60),
+                                        TextInput::make('contact_form_config.recipient_email')
+                                            ->label('Correo destino del formulario')
+                                            ->email()
+                                            ->helperText('Si se deja vacio, se usa el email principal del sitio.'),
+                                        Textarea::make('contact_form_config.success_message')
+                                            ->label('Mensaje de exito')
+                                            ->rows(2)
+                                            ->columnSpanFull(),
+                                        Textarea::make('contact_form_config.intro')
+                                            ->label('Texto introductorio del formulario')
+                                            ->rows(2)
                                             ->columnSpanFull(),
                                     ]),
                                 Section::make('Call To Action')
@@ -185,6 +233,23 @@ class SiteForm
                                             ])
                                             ->columnSpanFull()
                                             ->itemLabel(fn (array $state): ?string => $state['titulo'] ?? null),
+                                        Textarea::make('company_profile.mission')
+                                            ->label('Mision')
+                                            ->rows(3)
+                                            ->columnSpanFull(),
+                                        Textarea::make('company_profile.vision')
+                                            ->label('Vision')
+                                            ->rows(3)
+                                            ->columnSpanFull(),
+                                        Repeater::make('company_profile.values')
+                                            ->label('Valores')
+                                            ->schema([
+                                                TextInput::make('label')
+                                                    ->label('Valor')
+                                                    ->required(),
+                                            ])
+                                            ->columnSpanFull()
+                                            ->itemLabel(fn (array $state): ?string => $state['label'] ?? null),
                                     ]),
                                 Section::make('Servicios')
                                     ->schema([
@@ -218,6 +283,22 @@ class SiteForm
                                             ->deletable(false)
                                             ->columnSpanFull()
                                             ->itemLabel(fn (array $state): ?string => Site::getSectionOptions()[$state['seccion'] ?? ''] ?? null),
+                                    ]),
+                                Section::make('Distintivos')
+                                    ->columns(2)
+                                    ->schema([
+                                        Toggle::make('company_profile.repse_enabled')
+                                            ->label('Mostrar distintivo REPSE')
+                                            ->default(false),
+                                        TextInput::make('company_profile.repse_label')
+                                            ->label('Etiqueta del distintivo')
+                                            ->maxLength(60),
+                                        TextInput::make('company_profile.repse_url')
+                                            ->label('URL REPSE')
+                                            ->url(),
+                                        TextInput::make('company_profile.repse_logo')
+                                            ->label('URL del logo REPSE')
+                                            ->url(),
                                     ]),
                             ]),
 

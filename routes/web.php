@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\SiteContactController;
 use App\Models\Site;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,8 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth:sanctum')->post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
 Route::domain('{domain}')->where(['domain' => '^(?!' . preg_quote($appUrlHost, '/') . '$).*$'])->group(function () {
+    Route::post('/', [SiteContactController::class, 'submitByDomain'])->name('sites.contact.domain');
+
     Route::get('/robots.txt', function (string $domain) {
         $cleanDomain = str_replace('www.', '', $domain);
 
@@ -91,6 +94,8 @@ Route::domain('{domain}')->where(['domain' => '^(?!' . preg_quote($appUrlHost, '
         }
     });
 });
+
+Route::post('/sitios/{slug}/contacto', [SiteContactController::class, 'submitBySlug'])->name('sites.contact.slug');
 
 Route::middleware('auth:sanctum')->get('/sys-setup-secreto-' . env('APP_SETUP_TOKEN', '12345'), function () {
     if (! env('APP_SETUP_TOKEN')) {
