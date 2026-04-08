@@ -9,6 +9,7 @@
     $contacto = $site->contacto;
     $companyProfile = $site->company_profile;
     $contactForm = $site->contact_form;
+    $branding = $site->branding;
     $socialLinks = $site->resolved_social_links;
     $currentUrl = $site->resolved_canonical_url ?: url()->current();
     $metaTitle = $site->resolved_meta_title;
@@ -34,6 +35,7 @@
     $contactAction = $usesCustomDomain
         ? route('sites.contact.domain', ['domain' => $requestHost])
         : route('sites.contact.slug', ['slug' => $site->slug]);
+    $logoObjectFitClass = ($branding['logo_fit'] ?? 'contain') === 'cover' ? 'object-cover' : 'object-contain';
 @endphp
 <head>
     <meta charset="utf-8">
@@ -179,6 +181,13 @@
         .hero-slide.is-active {
             display: block;
         }
+
+        @media (min-width: 768px) {
+            .site-logo-adaptive {
+                height: {{ max((int) ($branding['logo_height_desktop'] ?? 56), 24) }}px !important;
+                max-width: {{ max((int) ($branding['logo_max_width_desktop'] ?? 180), 32) }}px !important;
+            }
+        }
     </style>
 </head>
 <body
@@ -204,7 +213,12 @@
         <div class="mx-auto max-w-7xl px-6 lg:px-8 h-20 flex items-center justify-between">
             <div class="flex items-center gap-4">
                 @if ($site->logo)
-                    <img src="{{ $site->logo }}" alt="{{ $site->nombre_empresa }}" class="h-10 w-10 md:h-12 md:w-12 rounded-xl object-cover shadow-sm">
+                    <img
+                        src="{{ $site->logo }}"
+                        alt="{{ $site->nombre_empresa }}"
+                        class="site-logo-adaptive {{ $logoObjectFitClass }} shrink-0 shadow-sm"
+                        style="height: {{ max((int) ($branding['logo_height_mobile'] ?? 40), 24) }}px; max-width: {{ max((int) ($branding['logo_max_width_mobile'] ?? 96), 32) }}px;"
+                    >
                 @else
                     <div class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-xl bg-secondary shadow-sm text-white font-bold text-xl">
                         {{ substr($site->nombre_empresa, 0, 1) }}

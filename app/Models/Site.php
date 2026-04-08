@@ -33,6 +33,7 @@ class Site extends Model
         'contacto_config',
         'company_profile',
         'contact_form_config',
+        'branding_config',
     ];
 
     public const DEFAULT_SECTION_ORDER = [
@@ -239,6 +240,17 @@ class Site extends Model
         ];
     }
 
+    public static function getDefaultBrandingConfig(): array
+    {
+        return [
+            'logo_height_mobile' => 40,
+            'logo_height_desktop' => 56,
+            'logo_max_width_mobile' => 96,
+            'logo_max_width_desktop' => 180,
+            'logo_fit' => 'contain',
+        ];
+    }
+
     public function getSeoAttribute(): array
     {
         return array_merge(self::getDefaultSeoConfig(), $this->seo_config ?? []);
@@ -286,6 +298,11 @@ class Site extends Model
     public function getContactFormAttribute(): array
     {
         return array_merge(self::getDefaultContactFormConfig(), $this->contact_form_config ?? []);
+    }
+
+    public function getBrandingAttribute(): array
+    {
+        return array_merge(self::getDefaultBrandingConfig(), $this->branding_config ?? []);
     }
 
     public function getResolvedSocialLinksAttribute(): array
@@ -382,6 +399,7 @@ class Site extends Model
             'contacto_config' => 'array',
             'company_profile' => 'array',
             'contact_form_config' => 'array',
+            'branding_config' => 'array',
         ];
     }
 }

@@ -59,6 +59,14 @@ class SiteForm
                                             ->label('URL del logo')
                                             ->url()
                                             ->maxLength(255),
+                                        Select::make('branding_config.logo_fit')
+                                            ->label('Ajuste del logo')
+                                            ->options([
+                                                'contain' => 'Contain',
+                                                'cover' => 'Cover',
+                                            ])
+                                            ->native(false)
+                                            ->default('contain'),
                                         TextInput::make('slogan')
                                             ->label('Slogan')
                                             ->maxLength(255),
@@ -66,6 +74,23 @@ class SiteForm
                                             ->label('URL de la imagen principal')
                                             ->url()
                                             ->maxLength(255)
+                                            ->columnSpanFull(),
+                                        TextInput::make('branding_config.logo_height_mobile')
+                                            ->label('Altura logo mobile (px)')
+                                            ->numeric()
+                                            ->default(40),
+                                        TextInput::make('branding_config.logo_height_desktop')
+                                            ->label('Altura logo desktop (px)')
+                                            ->numeric()
+                                            ->default(56),
+                                        TextInput::make('branding_config.logo_max_width_mobile')
+                                            ->label('Ancho maximo logo mobile (px)')
+                                            ->numeric()
+                                            ->default(96),
+                                        TextInput::make('branding_config.logo_max_width_desktop')
+                                            ->label('Ancho maximo logo desktop (px)')
+                                            ->numeric()
+                                            ->default(180)
                                             ->columnSpanFull(),
                                     ]),
                                 Section::make('Hero visual')

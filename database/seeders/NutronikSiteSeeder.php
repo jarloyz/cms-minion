@@ -112,6 +112,13 @@ class NutronikSiteSeeder extends Seeder
                     'success_message' => 'Gracias por escribir a Nutronik. Tu mensaje fue enviado correctamente.',
                     'intro' => 'Completa el formulario para una mejor experiencia y uno de nuestros asesores te dara seguimiento.',
                 ]),
+                'branding_config' => array_merge(Site::getDefaultBrandingConfig(), [
+                    'logo_height_mobile' => 42,
+                    'logo_height_desktop' => 64,
+                    'logo_max_width_mobile' => 120,
+                    'logo_max_width_desktop' => 220,
+                    'logo_fit' => 'contain',
+                ]),
                 'textos_ui' => [
                     'nav_inicio' => 'Inicio',
                     'nav_nosotros' => 'Quienes Somos',
