@@ -48,12 +48,66 @@ jobs:
     name: Continuous Deploy
     runs-on: ubuntu-latest
     needs: unit-tests
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite3, dom, filter, gd, json, libxml
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-deploy-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-deploy-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install NPM dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Validate deploy credentials
+        run: |
+          if [ -z "${SSH_HOST}" ] || [ -z "${SSH_USERNAME}" ] || [ -z "${DEPLOY_PATH}" ]; then
+            echo "Missing required deploy secrets."
+            exit 1
+          fi
+
+          if [ -z "${SSH_PRIVATE_KEY}" ] && [ -z "${SSH_PASSWORD}" ]; then
+            echo "Set either SSH_PRIVATE_KEY or SSH_PASSWORD."
+            exit 1
+          fi
+
+      - name: Install sshpass
+        if: ${{ secrets.SSH_PRIVATE_KEY == '' && secrets.SSH_PASSWORD != '' }}
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
       - name: Load SSH key
+        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
         uses: webfactory/ssh-agent@v0.9.0
         env:
           SSH_AUTH_SOCK: /tmp/ssh_agent.sock
@@ -61,19 +115,12 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add server to known_hosts
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-      - name: Prepare remote Laravel directories
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      - name: Prepare remote Laravel directories with SSH key
+        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
         run: |
           case "$DEPLOY_PATH" in
             ""|"/"|"/homepages"|"/homepages/"*"/"|"/.")
@@ -91,12 +138,27 @@ jobs:
               '${DEPLOY_PATH}/bootstrap/cache'
           "
 
-      - name: Sync project via rsync over SSH
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      - name: Prepare remote Laravel directories with password
+        if: ${{ secrets.SSH_PRIVATE_KEY == '' && secrets.SSH_PASSWORD != '' }}
+        run: |
+          case "$DEPLOY_PATH" in
+            ""|"/"|"/homepages"|"/homepages/"*"/"|"/.")
+              echo "DEPLOY_PATH is missing or unsafe: '$DEPLOY_PATH'"
+              exit 1
+              ;;
+          esac
+
+          sshpass -p "${SSH_PASSWORD}" ssh -p "${SSH_PORT:-22}" "${SSH_USERNAME}@${SSH_HOST}" "
+            mkdir -p '${DEPLOY_PATH}' \
+              '${DEPLOY_PATH}/storage/framework/cache' \
+              '${DEPLOY_PATH}/storage/framework/sessions' \
+              '${DEPLOY_PATH}/storage/framework/views' \
+              '${DEPLOY_PATH}/storage/logs' \
+              '${DEPLOY_PATH}/bootstrap/cache'
+          "
+
+      - name: Sync project via rsync with SSH key
+        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
         run: |
           case "$DEPLOY_PATH" in
             ""|"/"|"/homepages"|"/homepages/"*"/"|"/.")
@@ -108,9 +170,7 @@ jobs:
           rsync -az --checksum \
             --exclude='.git/' \
             --exclude='.github/' \
-            --exclude='vendor/' \
             --exclude='node_modules/' \
-            --exclude='public/build/' \
             --exclude='.env' \
             --exclude='tests/' \
             --exclude='storage/logs/' \
@@ -120,19 +180,45 @@ jobs:
             -e "ssh -p ${SSH_PORT:-22}" \
             ./ "${SSH_USERNAME}@${SSH_HOST}:${DEPLOY_PATH}/"
 
-      - name: Install dependencies and build on server
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      - name: Sync project via rsync with password
+        if: ${{ secrets.SSH_PRIVATE_KEY == '' && secrets.SSH_PASSWORD != '' }}
+        run: |
+          case "$DEPLOY_PATH" in
+            ""|"/"|"/homepages"|"/homepages/"*"/"|"/.")
+              echo "DEPLOY_PATH is missing or unsafe: '$DEPLOY_PATH'"
+              exit 1
+              ;;
+          esac
+
+          sshpass -p "${SSH_PASSWORD}" rsync -az --checksum \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='node_modules/' \
+            --exclude='.env' \
+            --exclude='tests/' \
+            --exclude='storage/logs/' \
+            --exclude='storage/framework/cache/' \
+            --exclude='storage/framework/sessions/' \
+            --exclude='storage/framework/views/' \
+            -e "ssh -p ${SSH_PORT:-22}" \
+            ./ "${SSH_USERNAME}@${SSH_HOST}:${DEPLOY_PATH}/"
+
+      - name: Run remote Laravel maintenance with SSH key
+        if: ${{ secrets.SSH_PRIVATE_KEY != '' }}
         run: |
           ssh -p "${SSH_PORT:-22}" "${SSH_USERNAME}@${SSH_HOST}" "
             cd '${DEPLOY_PATH}' &&
             mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache &&
             chmod -R 775 storage bootstrap/cache &&
-            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev &&
-            if [ -f package-lock.json ]; then npm ci; else npm install; fi &&
-            npm run build &&
-            php artisan optimize:clear
+            /usr/bin/php8.4 artisan optimize:clear
+          "
+
+      - name: Run remote Laravel maintenance with password
+        if: ${{ secrets.SSH_PRIVATE_KEY == '' && secrets.SSH_PASSWORD != '' }}
+        run: |
+          sshpass -p "${SSH_PASSWORD}" ssh -p "${SSH_PORT:-22}" "${SSH_USERNAME}@${SSH_HOST}" "
+            cd '${DEPLOY_PATH}' &&
+            mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache &&
+            chmod -R 775 storage bootstrap/cache &&
+            /usr/bin/php8.4 artisan optimize:clear
           "
