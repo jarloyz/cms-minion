@@ -203,9 +203,6 @@
                         {{ $cta['label'] }}
                     </a>
                 @endif
-                <a href="{{ url('/admin') }}" class="hidden md:inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
-                    Panel Admin
-                </a>
                 <!-- Mobile menu button -->
                 <button type="button" class="md:hidden rounded-md p-2 text-slate-600 hover:bg-slate-100">
                     <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">

@@ -18,11 +18,8 @@
                     La demo ahora incluye varias marcas y enfoques usando la misma plantilla: un sitio corporativo, un portfolio backend-first y un proyecto editorial. Todo se edita desde Filament y se publica en su propia URL.
                 </p>
                 <div class="mt-8 flex flex-wrap gap-3">
-                    <a href="{{ url('/admin') }}" class="rounded-full bg-orange-600 px-6 py-3 font-semibold text-white shadow-lg shadow-orange-200 transition hover:opacity-90">
-                        Entrar al panel
-                    </a>
                     @if (! empty($siteCards))
-                        <a href="{{ url('/sitios/' . $siteCards[0]['slug']) }}" class="rounded-full border border-slate-200 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-slate-300">
+                        <a href="{{ url('/sitios/' . $siteCards[0]['slug']) }}" class="rounded-full bg-orange-600 px-6 py-3 font-semibold text-white shadow-lg shadow-orange-200 transition hover:opacity-90">
                             Ver primer demo
                         </a>
                     @endif
@@ -70,9 +67,6 @@
                         <div class="mt-6 flex flex-wrap gap-3">
                             <a href="{{ url('/sitios/' . $site['slug']) }}" class="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90">
                                 Ver demo
-                            </a>
-                            <a href="{{ url('/admin') }}" class="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300">
-                                Editar en panel
                             </a>
                         </div>
                     </article>
