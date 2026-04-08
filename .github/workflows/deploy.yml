@@ -33,13 +33,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-composer-
 
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
       - name: Prepare environment
         run: |
           cp .env.example .env
           php artisan key:generate --ansi
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist
 
       - name: Run unit tests
         run: php artisan test --testsuite=Unit
