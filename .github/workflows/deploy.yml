@@ -9,10 +9,6 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-defaults:
-  run:
-    working-directory: demo-cms
-
 jobs:
   unit-tests:
     name: Unit Tests
@@ -32,8 +28,8 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: demo-cms/vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('demo-cms/composer.lock') }}
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
           restore-keys: |
             ${{ runner.os }}-composer-
 
