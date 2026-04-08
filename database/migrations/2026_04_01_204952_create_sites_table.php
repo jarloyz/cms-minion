@@ -15,10 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('nombre_empresa');
             $table->string('slug')->unique();
+            $table->string('dominio')->nullable()->unique();
+            $table->string('tema')->default('modern-blue');
             $table->string('logo')->nullable();
             $table->string('imagen_principal')->nullable();
-            $table->string('color_principal', 20)->default('#2563eb');
-            $table->string('color_secundario', 20)->default('#0f172a');
             $table->string('telefono', 40);
             $table->string('email', 120)->nullable();
             $table->string('direccion')->nullable();

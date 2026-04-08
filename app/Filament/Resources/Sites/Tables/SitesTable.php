@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Sites\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Tables\Columns\ColorColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -22,8 +21,13 @@ class SitesTable
                     ->label('URL')
                     ->searchable()
                     ->toggleable(),
-                ColorColumn::make('color_principal')
-                    ->label('Marca'),
+                TextColumn::make('dominio')
+                    ->label('Dominio')
+                    ->searchable()
+                    ->toggleable(),
+                TextColumn::make('tema')
+                    ->label('Tema')
+                    ->badge(),
                 TextColumn::make('telefono')
                     ->label('Telefono'),
                 TextColumn::make('email')

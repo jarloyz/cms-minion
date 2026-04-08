@@ -15,7 +15,7 @@ class EditSite extends EditRecord
     {
         return [
             Action::make('preview')
-                ->label('Ver preview')
+                ->label('Ver sitio')
                 ->url(fn (): string => url("/sitios/{$this->record->slug}"))
                 ->openUrlInNewTab(),
             DeleteAction::make(),

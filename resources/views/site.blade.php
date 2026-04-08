@@ -1,10 +1,108 @@
 <!DOCTYPE html>
 <html lang="es" class="scroll-smooth">
+@php
+    $orderedSections = $site->ordered_sections;
+    $seo = $site->seo;
+    $tracking = $site->tracking;
+    $cta = $site->cta;
+    $socialLinks = $site->resolved_social_links;
+    $currentUrl = $site->resolved_canonical_url ?: url()->current();
+    $metaTitle = $site->resolved_meta_title;
+    $metaDescription = $site->resolved_meta_description;
+    $ogTitle = $seo['og_title'] ?: $metaTitle;
+    $ogDescription = $seo['og_description'] ?: $metaDescription;
+    $ogImage = $site->resolved_og_image;
+    $robotsContent = $seo['indexable'] ? 'index,follow,max-image-preview:large' : 'noindex,nofollow';
+    $ctaTarget = $cta['open_in_new_tab'] ? '_blank' : '_self';
+@endphp
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $site->nombre_empresa }} | Demo CMS</title>
+    <title>{{ $metaTitle }}</title>
+    <meta name="description" content="{{ $metaDescription }}">
+    @if ($seo['meta_keywords'])
+        <meta name="keywords" content="{{ $seo['meta_keywords'] }}">
+    @endif
+    <meta name="robots" content="{{ $robotsContent }}">
+    <meta name="googlebot" content="{{ $robotsContent }}">
+    <meta name="bingbot" content="{{ $robotsContent }}">
+    @if ($currentUrl)
+        <link rel="canonical" href="{{ $currentUrl }}">
+    @endif
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{ $ogTitle }}">
+    <meta property="og:description" content="{{ $ogDescription }}">
+    @if ($currentUrl)
+        <meta property="og:url" content="{{ $currentUrl }}">
+    @endif
+    @if ($ogImage)
+        <meta property="og:image" content="{{ $ogImage }}">
+    @endif
+    <meta name="twitter:card" content="{{ $seo['twitter_card'] }}">
+    <meta name="twitter:title" content="{{ $ogTitle }}">
+    <meta name="twitter:description" content="{{ $ogDescription }}">
+    @if ($ogImage)
+        <meta name="twitter:image" content="{{ $ogImage }}">
+    @endif
+    @if ($tracking['google_site_verification'])
+        <meta name="google-site-verification" content="{{ $tracking['google_site_verification'] }}">
+    @endif
+    @if ($tracking['bing_site_verification'])
+        <meta name="msvalidate.01" content="{{ $tracking['bing_site_verification'] }}">
+    @endif
     <script src="https://cdn.tailwindcss.com"></script>
+    @if ($tracking['google_tag_manager_id'])
+        <script>
+            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+            })(window,document,'script','dataLayer','{{ $tracking['google_tag_manager_id'] }}');
+        </script>
+    @elseif ($tracking['google_analytics_id'])
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $tracking['google_analytics_id'] }}"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '{{ $tracking['google_analytics_id'] }}');
+        </script>
+    @endif
+    @if ($tracking['google_ads_id'])
+        <script async src="https://www.googletagmanager.com/gtag/js?id={{ $tracking['google_ads_id'] }}"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '{{ $tracking['google_ads_id'] }}');
+        </script>
+    @endif
+    @if ($tracking['meta_pixel_id'])
+        <script>
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '{{ $tracking['meta_pixel_id'] }}');
+            fbq('track', 'PageView');
+        </script>
+    @endif
+    @if ($tracking['bing_uet_id'])
+        <script>
+            (function(w,d,t,r,u){
+                var f,n,i;w[u]=w[u]||[],f=function(){
+                    var o={ti:"{{ $tracking['bing_uet_id'] }}"};
+                    o.q=w[u],w[u]=new UET(o),w[u].push("pageLoad")
+                },n=d.createElement(t),n.src=r,n.async=1,n.onload=n.onreadystatechange=function(){
+                    var s=this.readyState;s&&s!=="loaded"&&s!=="complete"||(f(),n.onload=n.onreadystatechange=null)
+                },i=d.getElementsByTagName(t)[0],i.parentNode.insertBefore(n,i)
+            })(window,document,"script","https://bat.bing.com/bat.js","uetq");
+        </script>
+    @endif
     <script>
         tailwind.config = {
             theme: {
@@ -15,34 +113,57 @@
                             light: 'color-mix(in srgb, var(--color-marca) 15%, white)',
                             dark: 'color-mix(in srgb, var(--color-marca) 85%, black)',
                         },
+                        accent: 'var(--color-acento)',
                         secondary: 'var(--color-secundario)',
                     },
                     fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        sans: ['var(--font-family)', 'Inter', 'system-ui', 'sans-serif'],
+                        serif: ['var(--font-family)', 'serif'],
                     }
                 }
             }
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family={{ $site->theme_config['google_font'] }}&display=swap');
 
         :root {
-            --color-marca: {{ $site->color_principal }};
-            --color-secundario: {{ $site->color_secundario ?? '#0f172a' }};
+            --color-marca: {{ $site->theme_config['primary'] }};
+            --color-secundario: {{ $site->theme_config['secondary'] }};
+            --color-acento: {{ $site->theme_config['accent'] }};
+            --color-secundario-foreground: {{ $site->theme_config['secondary_foreground'] }};
+            --font-family: {{ $site->theme_config['font'] }};
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: var(--font-family);
             background-color: #f8fafc;
         }
 
         .text-balance {
             text-wrap: balance;
         }
+
+        .secondary-copy {
+            color: var(--color-secundario-foreground);
+        }
+
+        .secondary-copy-muted {
+            color: color-mix(in srgb, var(--color-secundario-foreground) 72%, transparent);
+        }
     </style>
 </head>
 <body class="text-slate-800 antialiased selection:bg-brand selection:text-white flex flex-col min-h-screen">
+    @if ($tracking['google_tag_manager_id'])
+        <noscript>
+            <iframe src="https://www.googletagmanager.com/ns.html?id={{ $tracking['google_tag_manager_id'] }}" height="0" width="0" style="display:none;visibility:hidden"></iframe>
+        </noscript>
+    @endif
+    @if ($tracking['meta_pixel_id'])
+        <noscript>
+            <img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id={{ $tracking['meta_pixel_id'] }}&ev=PageView&noscript=1"/>
+        </noscript>
+    @endif
 
     <!-- Navbar -->
     <header class="fixed inset-x-0 top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/50 transition-all duration-300">
@@ -65,12 +186,23 @@
 
             <nav class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
                 <a href="#inicio" class="hover:text-brand transition-colors">{{ $site->textos_ui['nav_inicio'] ?? 'Inicio' }}</a>
-                <a href="#nosotros" class="hover:text-brand transition-colors">{{ $site->textos_ui['nav_nosotros'] ?? 'Nosotros' }}</a>
-                <a href="#servicios" class="hover:text-brand transition-colors">{{ $site->textos_ui['nav_servicios'] ?? 'Servicios' }}</a>
-                <a href="#contacto" class="hover:text-brand transition-colors">{{ $site->textos_ui['nav_contacto'] ?? 'Contacto' }}</a>
+                @foreach ($orderedSections as $section)
+                    @if ($section === 'nosotros')
+                        <a href="#nosotros" class="hover:text-brand transition-colors">{{ $site->textos_ui['nav_nosotros'] ?? 'Nosotros' }}</a>
+                    @elseif ($section === 'servicios')
+                        <a href="#servicios" class="hover:text-brand transition-colors">{{ $site->textos_ui['nav_servicios'] ?? 'Servicios' }}</a>
+                    @elseif ($section === 'contacto')
+                        <a href="#contacto" class="hover:text-brand transition-colors">{{ $site->textos_ui['nav_contacto'] ?? 'Contacto' }}</a>
+                    @endif
+                @endforeach
             </nav>
 
             <div class="flex items-center gap-4">
+                @if ($cta['enabled'] && $cta['placement'] === 'navbar' && $cta['label'] && $cta['url'])
+                    <a href="{{ $cta['url'] }}" target="{{ $ctaTarget }}" @if($cta['open_in_new_tab']) rel="noreferrer noopener" @endif class="hidden md:inline-flex items-center justify-center rounded-full {{ $cta['style'] === 'secondary' ? 'border border-slate-200 bg-white text-slate-700 hover:border-slate-300' : 'bg-brand text-white hover:bg-brand-dark' }} px-5 py-2.5 text-sm font-semibold shadow-sm transition-all">
+                        {{ $cta['label'] }}
+                    </a>
+                @endif
                 <a href="{{ url('/admin') }}" class="hidden md:inline-flex items-center justify-center rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">
                     Panel Admin
                 </a>
@@ -113,6 +245,11 @@
                             <a href="#servicios" class="text-sm font-semibold leading-6 text-slate-900 flex items-center gap-2 group">
                                 {{ $site->textos_ui['cta_hero_secundario'] ?? 'Ver servicios' }} <span class="group-hover:translate-x-1 transition-transform">→</span>
                             </a>
+                            @if ($cta['enabled'] && $cta['placement'] === 'hero' && $cta['label'] && $cta['url'])
+                                <a href="{{ $cta['url'] }}" target="{{ $ctaTarget }}" @if($cta['open_in_new_tab']) rel="noreferrer noopener" @endif class="rounded-full {{ $cta['style'] === 'secondary' ? 'border border-slate-300 bg-white text-slate-900' : 'bg-secondary text-white' }} px-6 py-3.5 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5">
+                                    {{ $cta['label'] }}
+                                </a>
+                            @endif
                         </div>
                     </div>
                     <div class="relative lg:ml-auto w-full max-w-xl xl:max-w-none">
@@ -127,7 +264,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm font-bold text-slate-900">{{ $site->textos_ui['badge_hero'] ?? 'Soluciones Rápidas' }}</p>
-                                    <p class="text-xs text-slate-500">{{ $site->textos_ui['badge_hero_sub'] ?? 'Para tu negocio' }}</p>
+                                    <p class="text-xs text-accent">{{ $site->textos_ui['badge_hero_sub'] ?? 'Para tu negocio' }}</p>
                                 </div>
                             </div>
                         </div>
@@ -136,136 +273,154 @@
             </div>
         </section>
 
-        <!-- Nosotros Section -->
-        <section id="nosotros" class="py-24 sm:py-32 bg-slate-50">
-            <div class="mx-auto max-w-7xl px-6 lg:px-8">
-                <div class="mx-auto max-w-2xl lg:mx-0">
-                    <h2 class="text-base font-semibold leading-7 text-brand uppercase tracking-wide">{{ $site->textos_ui['titulo_nosotros'] ?? 'Quiénes Somos' }}</h2>
-                    <p class="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{{ $site->textos_ui['subtitulo_nosotros'] ?? 'Conoce nuestra historia y propósito' }}</p>
-                    <p class="mt-6 text-lg leading-8 text-slate-600">
-                        {{ $site->quienes_somos }}
-                    </p>
-                </div>
-                <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
-                    <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
-                        @if(!empty($site->caracteristicas) && is_array($site->caracteristicas))
-                            @foreach($site->caracteristicas as $caracteristica)
-                                <div class="flex flex-col">
-                                    <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900">
-                                        <svg class="h-5 w-5 flex-none text-brand" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path fill-rule="evenodd" d="{{ $caracteristica['icono'] ?? 'M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z' }}" clip-rule="evenodd" />
-                                        </svg>
-                                        {{ $caracteristica['titulo'] ?? '' }}
-                                    </dt>
-                                    <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-slate-600">
-                                        <p class="flex-auto">{{ $caracteristica['descripcion'] ?? '' }}</p>
-                                    </dd>
-                                </div>
-                            @endforeach
-                        @endif
-                    </dl>
-                </div>
-            </div>
-        </section>
+        @foreach ($orderedSections as $section)
+            @if ($section === 'nosotros')
+                <section id="nosotros" class="py-24 sm:py-32 bg-slate-50">
+                    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                        <div class="mx-auto max-w-2xl lg:mx-0">
+                            <h2 class="text-base font-semibold leading-7 text-brand uppercase tracking-wide">{{ $site->textos_ui['titulo_nosotros'] ?? 'Quiénes Somos' }}</h2>
+                            <p class="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{{ $site->textos_ui['subtitulo_nosotros'] ?? 'Conoce nuestra historia y propósito' }}</p>
+                            <p class="mt-6 text-lg leading-8 text-slate-600">
+                                {{ $site->quienes_somos }}
+                            </p>
+                        </div>
+                        <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+                            <dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+                                @if(!empty($site->caracteristicas) && is_array($site->caracteristicas))
+                                    @foreach($site->caracteristicas as $caracteristica)
+                                        <div class="flex flex-col">
+                                            <dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-slate-900">
+                                                <svg class="h-5 w-5 flex-none text-brand" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path fill-rule="evenodd" d="{{ $caracteristica['icono'] ?? 'M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z' }}" clip-rule="evenodd" />
+                                                </svg>
+                                                {{ $caracteristica['titulo'] ?? '' }}
+                                            </dt>
+                                            <dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-slate-600">
+                                                <p class="flex-auto">{{ $caracteristica['descripcion'] ?? '' }}</p>
+                                            </dd>
+                                        </div>
+                                    @endforeach
+                                @endif
+                            </dl>
+                        </div>
+                    </div>
+                </section>
+            @elseif ($section === 'servicios')
+                <section id="servicios" class="py-24 sm:py-32 bg-white">
+                    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                        <div class="mx-auto max-w-2xl text-center">
+                            <h2 class="text-base font-semibold leading-7 text-brand uppercase tracking-wide">{{ $site->textos_ui['titulo_servicios'] ?? 'Nuestros Servicios' }}</h2>
+                            <p class="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{{ $site->textos_ui['subtitulo_servicios'] ?? 'Soluciones a tu medida' }}</p>
+                            <p class="mt-6 text-lg leading-8 text-slate-600">{{ $site->textos_ui['texto_servicios'] ?? 'Descubre cómo podemos ayudarte a alcanzar tus objetivos empresariales con nuestros servicios especializados.' }}</p>
+                        </div>
+                        <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+                            <div class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-3">
+                                @if(!empty($site->servicios) && is_array($site->servicios))
+                                    @foreach($site->servicios as $servicio)
+                                    <div class="relative group rounded-3xl bg-slate-50 p-8 ring-1 ring-slate-200 transition-all hover:shadow-xl hover:-translate-y-1">
+                                        <div class="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-light">
+                                            <svg class="h-7 w-7 text-brand" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $servicio['icono'] ?? 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z' }}" />
+                                            </svg>
+                                        </div>
+                                        <h3 class="text-lg font-bold leading-8 text-slate-900 group-hover:text-brand transition-colors">{{ $servicio['titulo'] ?? '' }}</h3>
+                                        <p class="mt-4 text-base leading-7 text-slate-600">{{ $servicio['descripcion'] ?? '' }}</p>
+                                    </div>
+                                    @endforeach
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            @elseif ($section === 'contacto')
+                <section id="contacto" class="relative isolate bg-secondary py-24 sm:py-32">
+                    <div class="mx-auto max-w-7xl px-6 lg:px-8">
+                        <div class="mx-auto max-w-2xl lg:mx-0 secondary-copy">
+                            <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">{{ $site->textos_ui['titulo_contacto'] ?? '¿Listo para empezar?' }}</h2>
+                            <p class="mt-6 text-lg leading-8 secondary-copy-muted">{{ $site->textos_ui['texto_contacto'] ?? 'Contáctanos hoy mismo y descubre cómo podemos transformar tu negocio. Nuestro equipo está listo para atenderte.' }}</p>
+                        </div>
 
-        <!-- Servicios Section -->
-        <section id="servicios" class="py-24 sm:py-32 bg-white">
-            <div class="mx-auto max-w-7xl px-6 lg:px-8">
-                <div class="mx-auto max-w-2xl text-center">
-                    <h2 class="text-base font-semibold leading-7 text-brand uppercase tracking-wide">{{ $site->textos_ui['titulo_servicios'] ?? 'Nuestros Servicios' }}</h2>
-                    <p class="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{{ $site->textos_ui['subtitulo_servicios'] ?? 'Soluciones a tu medida' }}</p>
-                    <p class="mt-6 text-lg leading-8 text-slate-600">{{ $site->textos_ui['texto_servicios'] ?? 'Descubre cómo podemos ayudarte a alcanzar tus objetivos empresariales con nuestros servicios especializados.' }}</p>
-                </div>
-                <div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
-                    <div class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-10 lg:max-w-none lg:grid-cols-3">
-                        @if(!empty($site->servicios) && is_array($site->servicios))
-                            @foreach($site->servicios as $servicio)
-                            <div class="relative group rounded-3xl bg-slate-50 p-8 ring-1 ring-slate-200 transition-all hover:shadow-xl hover:-translate-y-1">
-                                <div class="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-light">
-                                    <svg class="h-7 w-7 text-brand" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $servicio['icono'] ?? 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z' }}" />
+                        <div class="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-8 sm:mt-20 lg:max-w-none lg:grid-cols-3">
+                            <div class="flex gap-x-6 rounded-2xl bg-white/5 p-8 ring-1 ring-white/10 backdrop-blur-sm">
+                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand">
+                                    <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.896-1.596-5.48-4.09-7.074-7.07L8.03 8.35a1.125 1.125 0 00.417-1.173L7.34 2.748A1.125 1.125 0 006.25 1.9h-1.37A2.25 2.25 0 002.25 4.15v2.6z" />
                                     </svg>
                                 </div>
-                                <h3 class="text-lg font-bold leading-8 text-slate-900 group-hover:text-brand transition-colors">{{ $servicio['titulo'] ?? '' }}</h3>
-                                <p class="mt-4 text-base leading-7 text-slate-600">{{ $servicio['descripcion'] ?? '' }}</p>
+                                <div>
+                                    <h3 class="text-base font-semibold leading-7 secondary-copy">{{ $site->textos_ui['label_telefono'] ?? 'Teléfono' }}</h3>
+                                    <p class="mt-2 leading-7 secondary-copy-muted">{{ $site->telefono }}</p>
+                                </div>
                             </div>
-                            @endforeach
+
+                            @if($site->email)
+                            <div class="flex gap-x-6 rounded-2xl bg-white/5 p-8 ring-1 ring-white/10 backdrop-blur-sm">
+                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand">
+                                    <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-semibold leading-7 secondary-copy">{{ $site->textos_ui['label_email'] ?? 'Email' }}</h3>
+                                    <p class="mt-2 leading-7 secondary-copy-muted">{{ $site->email }}</p>
+                                </div>
+                            </div>
+                            @endif
+
+                            @if($site->direccion)
+                            <div class="flex gap-x-6 rounded-2xl bg-white/5 p-8 ring-1 ring-white/10 backdrop-blur-sm">
+                                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand">
+                                    <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-base font-semibold leading-7 secondary-copy">{{ $site->textos_ui['label_direccion'] ?? 'Dirección' }}</h3>
+                                    <p class="mt-2 leading-7 secondary-copy-muted">{{ $site->direccion }}</p>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+
+                        @if (! empty($socialLinks) || ($cta['enabled'] && $cta['placement'] === 'contacto' && $cta['label'] && $cta['url']))
+                            <div class="mt-10 flex flex-wrap items-center gap-3">
+                                @if ($cta['enabled'] && $cta['placement'] === 'contacto' && $cta['label'] && $cta['url'])
+                                    <a href="{{ $cta['url'] }}" target="{{ $ctaTarget }}" @if($cta['open_in_new_tab']) rel="noreferrer noopener" @endif class="rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-dark transition-all">
+                                        {{ $cta['label'] }}
+                                    </a>
+                                @endif
+                                @foreach ($socialLinks as $network => $url)
+                                    <a href="{{ $url }}" target="_blank" rel="noreferrer noopener" class="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium secondary-copy hover:bg-white/10 transition-all">
+                                        {{ match($network) {
+                                            'contact_url' => 'Contacto',
+                                            'x' => 'X',
+                                            default => ucfirst($network),
+                                        } }}
+                                    </a>
+                                @endforeach
+                            </div>
                         @endif
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Contact Section -->
-        <section id="contacto" class="relative isolate bg-secondary py-24 sm:py-32">
-            <div class="mx-auto max-w-7xl px-6 lg:px-8">
-                <div class="mx-auto max-w-2xl lg:mx-0 text-white">
-                    <h2 class="text-3xl font-bold tracking-tight sm:text-4xl">{{ $site->textos_ui['titulo_contacto'] ?? '¿Listo para empezar?' }}</h2>
-                    <p class="mt-6 text-lg leading-8 text-slate-300">{{ $site->textos_ui['texto_contacto'] ?? 'Contáctanos hoy mismo y descubre cómo podemos transformar tu negocio. Nuestro equipo está listo para atenderte.' }}</p>
-                </div>
-
-                <div class="mx-auto mt-16 grid max-w-2xl grid-cols-1 gap-8 sm:mt-20 lg:max-w-none lg:grid-cols-3">
-                    <div class="flex gap-x-6 rounded-2xl bg-white/5 p-8 ring-1 ring-white/10 backdrop-blur-sm">
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand">
-                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.896-1.596-5.48-4.09-7.074-7.07L8.03 8.35a1.125 1.125 0 00.417-1.173L7.34 2.748A1.125 1.125 0 006.25 1.9h-1.37A2.25 2.25 0 002.25 4.15v2.6z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-base font-semibold leading-7 text-white">{{ $site->textos_ui['label_telefono'] ?? 'Teléfono' }}</h3>
-                            <p class="mt-2 leading-7 text-slate-300">{{ $site->telefono }}</p>
-                        </div>
-                    </div>
-
-                    @if($site->email)
-                    <div class="flex gap-x-6 rounded-2xl bg-white/5 p-8 ring-1 ring-white/10 backdrop-blur-sm">
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand">
-                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-base font-semibold leading-7 text-white">{{ $site->textos_ui['label_email'] ?? 'Email' }}</h3>
-                            <p class="mt-2 leading-7 text-slate-300">{{ $site->email }}</p>
-                        </div>
-                    </div>
-                    @endif
-
-                    @if($site->direccion)
-                    <div class="flex gap-x-6 rounded-2xl bg-white/5 p-8 ring-1 ring-white/10 backdrop-blur-sm">
-                        <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand">
-                            <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-base font-semibold leading-7 text-white">{{ $site->textos_ui['label_direccion'] ?? 'Dirección' }}</h3>
-                            <p class="mt-2 leading-7 text-slate-300">{{ $site->direccion }}</p>
-                        </div>
-                    </div>
-                    @endif
-                </div>
-            </div>
-        </section>
+                </section>
+            @endif
+        @endforeach
     </main>
 
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 mt-auto">
         <div class="mx-auto max-w-7xl px-6 py-12 md:flex md:items-center md:justify-between lg:px-8">
             <div class="flex justify-center space-x-6 md:order-2">
-                <a href="#" class="text-slate-400 hover:text-brand">
-                    <span class="sr-only">Facebook</span>
-                    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
-                    </svg>
-                </a>
-                <a href="#" class="text-slate-400 hover:text-brand">
-                    <span class="sr-only">Instagram</span>
-                    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clip-rule="evenodd" />
-                    </svg>
-                </a>
+                @foreach ($socialLinks as $network => $url)
+                    <a href="{{ $url }}" target="_blank" rel="noreferrer noopener" class="text-slate-400 hover:text-brand">
+                        <span class="sr-only">{{ $network }}</span>
+                        <span class="text-sm font-medium">{{ match($network) {
+                            'contact_url' => 'Contacto',
+                            'x' => 'X',
+                            default => ucfirst($network),
+                        } }}</span>
+                    </a>
+                @endforeach
             </div>
             <div class="mt-8 md:order-1 md:mt-0">
                 <p class="text-center text-xs leading-5 text-slate-500">&copy; {{ date('Y') }} {{ $site->nombre_empresa }}. {{ $site->textos_ui['footer_derechos'] ?? 'Todos los derechos reservados.' }}</p>

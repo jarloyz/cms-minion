@@ -1,15 +1,21 @@
-name: Deploy to IONOS via FTP
+name: Test and Deploy
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+defaults:
+  run:
+    working-directory: demo-cms
+
 jobs:
-  deploy:
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -19,64 +25,118 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, dom, filter, gd, json, libxml, sqlite3
+          php-version: "8.3"
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite3, dom, filter, gd, json, libxml
           coverage: none
 
-      - name: Install Composer Dependencies
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
         with:
-          node-version: '24'
+          path: demo-cms/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('demo-cms/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
 
-      - name: Install NPM Dependencies and Build
+      - name: Prepare environment
         run: |
-          npm install
-          npm run build
+          cp .env.example .env
+          php artisan key:generate --ansi
 
-      - name: Deploy via lftp (SFTP)
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run unit tests
+        run: php artisan test --testsuite=Unit
+
+  deploy:
+    name: Continuous Deploy
+    runs-on: ubuntu-latest
+    needs: unit-tests
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Load SSH key
+        uses: webfactory/ssh-agent@v0.9.0
         env:
-          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
-          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_SERVER: ${{ secrets.FTP_SERVER }}
-          FTP_TARGET_DIR: ${{ secrets.FTP_TARGET_DIR }}
+          SSH_AUTH_SOCK: /tmp/ssh_agent.sock
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y lftp
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-          # Generamos el script de lftp usando Python para evitar cualquier error con caracteres especiales o espacios en las contraseñas
-          python3 -c "
-          import os
+      - name: Prepare remote Laravel directories
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          case "$DEPLOY_PATH" in
+            ""|"/"|"/homepages"|"/homepages/"*"/"|"/.")
+              echo "DEPLOY_PATH is missing or unsafe: '$DEPLOY_PATH'"
+              exit 1
+              ;;
+          esac
 
-          username = os.environ.get('FTP_USERNAME', '')
-          password = os.environ.get('FTP_PASSWORD', '')
-          server = os.environ.get('FTP_SERVER', '')
-          target = os.environ.get('FTP_TARGET_DIR', '')
-
-          # Escapamos comillas y barras invertidas para lftp
-          password_escaped = password.replace('\\\\', '\\\\\\\\').replace('\"', '\\\\\"')
-
-          script = f\"\"\"
-          set sftp:auto-confirm yes
-          open -u \"{username}\",\"{password_escaped}\" sftp://{server}
-          mirror -R --verbose \\
-            --exclude-glob=.git/ \\
-            --exclude-glob=.github/ \\
-            --exclude-glob=node_modules/ \\
-            --exclude-glob=.env \\
-            --exclude-glob=storage/logs/ \\
-            --exclude-glob=storage/framework/cache/ \\
-            --exclude-glob=storage/framework/sessions/ \\
-            --exclude-glob=storage/framework/views/ \\
-            --exclude-glob=tests/ \\
-            ./ \"{target}\"
-          \"\"\"
-
-          with open('deploy.lftp', 'w') as f:
-              f.write(script)
+          ssh -p "${SSH_PORT:-22}" "${SSH_USERNAME}@${SSH_HOST}" "
+            mkdir -p '${DEPLOY_PATH}' \
+              '${DEPLOY_PATH}/storage/framework/cache' \
+              '${DEPLOY_PATH}/storage/framework/sessions' \
+              '${DEPLOY_PATH}/storage/framework/views' \
+              '${DEPLOY_PATH}/storage/logs' \
+              '${DEPLOY_PATH}/bootstrap/cache'
           "
 
-          # Ejecutamos el script seguro
-          lftp -f deploy.lftp
+      - name: Sync project via rsync over SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          case "$DEPLOY_PATH" in
+            ""|"/"|"/homepages"|"/homepages/"*"/"|"/.")
+              echo "DEPLOY_PATH is missing or unsafe: '$DEPLOY_PATH'"
+              exit 1
+              ;;
+          esac
+
+          rsync -az --checksum \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='vendor/' \
+            --exclude='node_modules/' \
+            --exclude='public/build/' \
+            --exclude='.env' \
+            --exclude='tests/' \
+            --exclude='storage/logs/' \
+            --exclude='storage/framework/cache/' \
+            --exclude='storage/framework/sessions/' \
+            --exclude='storage/framework/views/' \
+            -e "ssh -p ${SSH_PORT:-22}" \
+            ./ "${SSH_USERNAME}@${SSH_HOST}:${DEPLOY_PATH}/"
+
+      - name: Install dependencies and build on server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -p "${SSH_PORT:-22}" "${SSH_USERNAME}@${SSH_HOST}" "
+            cd '${DEPLOY_PATH}' &&
+            mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache &&
+            chmod -R 775 storage bootstrap/cache &&
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev &&
+            if [ -f package-lock.json ]; then npm ci; else npm install; fi &&
+            npm run build &&
+            php artisan optimize:clear
+          "
